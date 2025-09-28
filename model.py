@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-# ✅ adjoint 쓰지 말고 일반 odeint 사용 (Hutchinson + 고계미분 섞일 때 안전)
-from torchdiffeq import odeint_adjoint as odeint
+from torchdiffeq import odeint
 
 # -----------------------------
 # ODEfunc: 여기서는 requires_grad_ 절대 금지
