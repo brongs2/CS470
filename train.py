@@ -1,6 +1,7 @@
 import torch, torch.nn as nn, torch.optim as optim
 from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
+import numpy as np
 from model import CNFModel
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -17,8 +18,14 @@ transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Lambda(lambda x: x.view(-1))
 ])
+
+# Subsample 20% of MNIST for training
+full_dataset = datasets.MNIST("./data", train=True, download=True, transform=transform)
+subset_size = int(0.2 * len(full_dataset))
+indices = np.random.choice(len(full_dataset), size=subset_size, replace=False)
+train_dataset = Subset(full_dataset, indices)
 train_loader = DataLoader(
-    datasets.MNIST("./data", train=True, download=True, transform=transform),
+    train_dataset,
     batch_size=8, shuffle=True, drop_last=True  # 더 작은 미니배치로 OOM 회피
 )
 
