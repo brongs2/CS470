@@ -24,15 +24,17 @@ class ODEfunc(nn.Module):
         else:
             z, logpz = states, None
 
-        # ❌ 여기서 requires_grad_ 절대 하지 말 것
+        # Ensure z.requires_grad is True before computing dzdt
+        if not z.requires_grad:
+            z = z.requires_grad_()
         dzdt = self.net(z)
 
         if logpz is None:
             return dzdt
 
-        # Hutchinson trace (안전하게 allow_unused)
+        # Hutchinson trace
         eps = torch.randn_like(z)
-        Jv = torch.autograd.grad(dzdt, z, eps, create_graph=True, allow_unused=True)[0]
+        Jv = torch.autograd.grad(dzdt, z, eps, create_graph=True)[0]
         if Jv is None:
             Jv = torch.zeros_like(z)
         div = (Jv * eps).sum(dim=1, keepdim=True)
