@@ -53,3 +53,5 @@ for epoch in range(5):
             print(f"Epoch {epoch} Iter {i} Loss {(running / (i+1)):.4f}")
 
 print("✅ Training finished!")
+torch.save(model.state_dict(), "cnf_mnist.pth")
+print("💾 Model saved to cnf_mnist.pth")
