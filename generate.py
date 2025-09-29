@@ -3,7 +3,7 @@ from model import CNFModel
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 dim = 28 * 28
-model = CNFModel(dim, hidden_dims=[64, 64], device=device).to(device)
+model = CNFModel(dim, hidden_dims=[64,64, 64], device=device).to(device)
 model.load_state_dict(torch.load("cnf_mnist.pth", map_location=device))  # 저장된 모델 불러오기
 
 import matplotlib.pyplot as plt

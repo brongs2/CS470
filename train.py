@@ -14,7 +14,7 @@ torch.manual_seed(0)
 np.random.seed(0)
 
 dim = 28*28
-model = CNFModel(dim, hidden_dims=[64, 64], device=device, method="euler", n_steps=64).to(device)
+model = CNFModel(dim, hidden_dims=[64,64, 64], device=device, method="euler", n_steps=64).to(device)
 
 # Optimizer
 opt = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
@@ -51,7 +51,7 @@ accum_steps = 4
 
 print("🚀 Training start...")
 model.train()
-for epoch in range(3):
+for epoch in range(10):
     running = 0.0
     opt.zero_grad(set_to_none=True)
     for i, (x, _) in enumerate(train_loader):
