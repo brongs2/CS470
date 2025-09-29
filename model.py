@@ -76,14 +76,15 @@ class CNF(nn.Module):
 # CNFModel: logpz는 grad 추적 불필요(zeros), 샘플링은 logpz=None
 # -----------------------------
 class CNFModel(nn.Module):
-    def __init__(self, dim, hidden_dims=[64, 64, 64], device="cpu"):
+    def __init__(self, dim, hidden_dims=[64, 64, 64], device="cpu", method="rk4", n_steps=None):
         super().__init__()
         self.device = device
         self.base_dist = torch.distributions.Normal(
             torch.zeros(dim, device=device),
             torch.ones(dim, device=device)
         )
-        self.cnf = CNF(ODEfunc(dim, hidden_dims), method="dopri5")
+        self.cnf = CNF(ODEfunc(dim, hidden_dims), method=method)
+        self.n_steps = n_steps
 
     def forward(self, x):
         # ✅ logpz는 grad 추적 불필요
