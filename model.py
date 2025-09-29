@@ -86,12 +86,15 @@ class CNFModel(nn.Module):
         self.cnf = CNF(ODEfunc(dim, hidden_dims), method=method)
         self.n_steps = n_steps
 
-    def forward(self, x):
+    def forward(self, x, extra_logdet=None):
         # ✅ logpz는 grad 추적 불필요
         logpz0 = torch.zeros(x.shape[0], 1, device=x.device)
         z, logpz_T = self.cnf(x, logpz=logpz0)
         logpz_base = self.base_dist.log_prob(z).sum(1, keepdim=True)
-        return logpz_base - logpz_T  # log p(x)
+        logp = logpz_base - logpz_T  # log p(x)
+        if extra_logdet is not None:
+            logp = logp + extra_logdet
+        return logp
 
     def sample(self, n):
         # ✅ 샘플링에서는 반드시 logpz=None + no_grad
