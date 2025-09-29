@@ -4,11 +4,17 @@ from torch.utils.data import DataLoader, Subset
 import numpy as np
 from model import CNFModel
 
+ALPHA = 0.05  # logit alpha for dequantization
+
 torch.backends.cuda.matmul.allow_tf32 = True
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+# Reproducibility
+torch.manual_seed(0)
+np.random.seed(0)
+
 dim = 28*28
-model = CNFModel(dim, hidden_dims=[64,64,64], device=device).to(device)
+model = CNFModel(dim, hidden_dims=[64, 64], device=device, method="euler", n_steps=64).to(device)
 
 # Optimizer
 opt = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
@@ -29,6 +35,17 @@ train_loader = DataLoader(
     batch_size=8, shuffle=True, drop_last=True  # 더 작은 미니배치로 OOM 회피
 )
 
+def dequant_logit(x, alpha=ALPHA):
+    # x: (B, 784) in [0,1]
+    u = torch.rand_like(x)
+    x = (x * 255.0 + u) / 256.0  # uniform dequantization
+    x_ = alpha + (1.0 - 2.0 * alpha) * x
+    y = torch.log(x_) - torch.log(1.0 - x_)
+    D = x_.size(1)
+    ldj_const = torch.log(torch.tensor(1.0 - 2.0 * alpha, device=x.device, dtype=x.dtype)) * D
+    ldj = ldj_const - (torch.log(x_) + torch.log(1.0 - x_)).sum(dim=1, keepdim=True)
+    return y, ldj
+
 # Gradient Accumulation: effective batch = 8 * 4 = 32
 accum_steps = 4
 
@@ -39,7 +56,9 @@ for epoch in range(3):
     opt.zero_grad(set_to_none=True)
     for i, (x, _) in enumerate(train_loader):
         x = x.to(device)
-        logp = model(x)                 # log p(x)
+        # dequantize + logit with analytic log-det
+        y, ldj = dequant_logit(x)
+        logp = model(y, extra_logdet=ldj)  # log p(x) with preprocessing ldj
         loss = -logp.mean() / accum_steps
         loss.backward()
         running += loss.item() * accum_steps
