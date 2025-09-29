@@ -13,8 +13,10 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 torch.manual_seed(0)
 np.random.seed(0)
 
+EPS = 1  # Hutchinson epsilons (try 1, 4, 16 for the report)
+
 dim = 28*28
-model = CNFModel(dim, hidden_dims=[64,64, 64], device=device, method="euler", n_steps=64).to(device)
+model = CNFModel(dim, hidden_dims=[64,64,64], device=device, method="euler", n_steps=64, num_eps=EPS).to(device)
 
 # Optimizer
 opt = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
@@ -50,8 +52,9 @@ def dequant_logit(x, alpha=ALPHA):
 accum_steps = 4
 
 print("🚀 Training start...")
+print(f"Using Hutchinson epsilons (K) = {EPS}")
 model.train()
-for epoch in range(10):
+for epoch in range(30):
     running = 0.0
     opt.zero_grad(set_to_none=True)
     for i, (x, _) in enumerate(train_loader):

@@ -7,8 +7,9 @@ from torchdiffeq import odeint
 # ODEfunc: 여기서는 requires_grad_ 절대 금지
 # -----------------------------
 class ODEfunc(nn.Module):
-    def __init__(self, dim, hidden_dims):
+    def __init__(self, dim, hidden_dims, num_eps: int = 1):
         super().__init__()
+        self.num_eps = int(num_eps)
         layers = []
         d_in = dim
         for h in hidden_dims:
@@ -31,12 +32,17 @@ class ODEfunc(nn.Module):
         if logpz is None:
             return dzdt
 
-        # Hutchinson trace
-        eps = torch.randn_like(z)
-        Jv = torch.autograd.grad(dzdt, z, eps, create_graph=True)[0]
-        if Jv is None:
-            Jv = torch.zeros_like(z)
-        div = (Jv * eps).sum(dim=1, keepdim=True)
+        # Hutchinson trace (support multiple epsilons; average over K)
+        K = max(1, getattr(self, "num_eps", 1))
+        div_accum = None
+        for _ in range(K):
+            eps = torch.randn_like(z)
+            Jv = torch.autograd.grad(dzdt, z, eps, create_graph=True, allow_unused=True)[0]
+            if Jv is None:
+                Jv = torch.zeros_like(z)
+            div_i = (Jv * eps).sum(dim=1, keepdim=True)
+            div_accum = div_i if div_accum is None else (div_accum + div_i)
+        div = div_accum / float(K)
         dlogpdt = -div
         return dzdt, dlogpdt
 
@@ -45,12 +51,13 @@ class ODEfunc(nn.Module):
 # CNF: 학습 경로일 때만 z.requires_grad_(True)
 # -----------------------------
 class CNF(nn.Module):
-    def __init__(self, odefunc, method="rk4", atol=1e-3, rtol=1e-3):  # dopri5 대신 rk4, 오차 완화
+    def __init__(self, odefunc, method="rk4", atol=1e-3, rtol=1e-3, step_size=None):  # dopri5 대신 rk4, 오차 완화
         super().__init__()
         self.odefunc = odefunc
         self.method = method
         self.atol = atol
         self.rtol = rtol
+        self.step_size = step_size
 
     def forward(self, z, logpz=None, reverse=False):
         times = torch.tensor([0.0, 1.0], device=z.device)
@@ -62,8 +69,13 @@ class CNF(nn.Module):
 
         state = (z, logpz) if logpz is not None else z
 
+        options = None
+        if self.method in ("euler", "rk4") and self.step_size is not None:
+            options = {"step_size": float(self.step_size)}
+
         out = odeint(self.odefunc, state, times,
-                     atol=self.atol, rtol=self.rtol, method=self.method)
+                     atol=self.atol, rtol=self.rtol, method=self.method,
+                     options=options)
 
         if logpz is None:
             return out[-1], None
@@ -76,14 +88,17 @@ class CNF(nn.Module):
 # CNFModel: logpz는 grad 추적 불필요(zeros), 샘플링은 logpz=None
 # -----------------------------
 class CNFModel(nn.Module):
-    def __init__(self, dim, hidden_dims=[64, 64, 64], device="cpu", method="rk4", n_steps=None):
+    def __init__(self, dim, hidden_dims=[64, 64, 64], device="cpu", method="rk4", n_steps=None, num_eps: int = 1):
         super().__init__()
         self.device = device
         self.base_dist = torch.distributions.Normal(
             torch.zeros(dim, device=device),
             torch.ones(dim, device=device)
         )
-        self.cnf = CNF(ODEfunc(dim, hidden_dims), method=method)
+        step_size = None
+        if n_steps is not None and method in ("euler", "rk4"):
+            step_size = 1.0 / float(n_steps)
+        self.cnf = CNF(ODEfunc(dim, hidden_dims, num_eps=num_eps), method=method, step_size=step_size)
         self.n_steps = n_steps
 
     def forward(self, x, extra_logdet=None):
@@ -102,3 +117,7 @@ class CNFModel(nn.Module):
             z = self.base_dist.sample((n,))
             x, _ = self.cnf(z, logpz=None, reverse=True)
         return x
+
+    def set_num_eps(self, k: int):
+        # Dynamically change the number of epsilons used in Hutchinson trace
+        self.cnf.odefunc.num_eps = int(k)
