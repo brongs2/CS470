@@ -1,3 +1,4 @@
+import argparse
 import torch, torch.nn as nn, torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Subset
@@ -6,14 +7,17 @@ from model import CNFModel
 
 ALPHA = 0.05  # logit alpha for dequantization
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--eps", type=int, default=1, help="Number of Hutchinson epsilons")
+args = parser.parse_args()
+EPS = args.eps
+
 torch.backends.cuda.matmul.allow_tf32 = True
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 # Reproducibility
 torch.manual_seed(0)
 np.random.seed(0)
-
-EPS = 1  # Hutchinson epsilons (try 1, 4, 16 for the report)
 
 dim = 28*28
 model = CNFModel(dim, hidden_dims=[64,64,64], device=device, method="euler", n_steps=64, num_eps=EPS).to(device)
