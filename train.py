@@ -58,7 +58,7 @@ accum_steps = 4
 print("🚀 Training start...")
 print(f"Using Hutchinson epsilons (K) = {EPS}")
 model.train()
-for epoch in range(30):
+for epoch in range(10):
     running = 0.0
     opt.zero_grad(set_to_none=True)
     for i, (x, _) in enumerate(train_loader):
