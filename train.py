@@ -81,3 +81,8 @@ for epoch in range(10):
 print("✅ Training finished!")
 torch.save(model.state_dict(), "cnf_mnist.pth")
 print("💾 Model saved to cnf_mnist.pth")
+torch.save({
+    "state_dict": model.state_dict(),
+    "num_eps": EPS
+}, "cnf_mnist.pth")
+print("💾 Model saved to cnf_mnist.pth (with num_eps)")
