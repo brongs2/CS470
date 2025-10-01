@@ -20,7 +20,7 @@ torch.manual_seed(0)
 np.random.seed(0)
 
 dim = 28*28
-model = CNFModel(dim, hidden_dims=[128,128,128], device=device, method="euler", n_steps=128, num_eps=EPS).to(device)
+model = CNFModel(dim, hidden_dims=[64,64,64], device=device, method="euler", n_steps=128, num_eps=EPS).to(device)
 
 # Optimizer
 opt = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
