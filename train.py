@@ -20,7 +20,7 @@ torch.manual_seed(0)
 np.random.seed(0)
 
 dim = 28*28
-model = CNFModel(dim, hidden_dims=[64,64,64], device=device, method="euler", n_steps=128, num_eps=EPS).to(device)
+model = CNFModel(dim, hidden_dims=[128,128,128], device=device, method="euler", n_steps=128, num_eps=EPS).to(device)
 
 # Optimizer
 opt = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
@@ -58,7 +58,7 @@ accum_steps = 4
 print("🚀 Training start...")
 print(f"Using Hutchinson epsilons (K) = {EPS}")
 model.train()
-for epoch in range(100):
+for epoch in range(30):
     running = 0.0
     opt.zero_grad(set_to_none=True)
     for i, (x, _) in enumerate(train_loader):
@@ -79,7 +79,6 @@ for epoch in range(100):
             print(f"Epoch {epoch} Iter {i} Loss {(running / (i+1)):.4f}")
 
 print("✅ Training finished!")
-torch.save(model.state_dict(), "cnf_mnist.pth")
 print("💾 Model saved to cnf_mnist.pth")
 torch.save({
     "state_dict": model.state_dict(),

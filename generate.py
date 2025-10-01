@@ -3,7 +3,7 @@ from model import CNFModel
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 dim = 28 * 28
-model = CNFModel(dim, hidden_dims=[64,64,64], device=device, method="rk4", n_steps=64).to(device)
+model = CNFModel(dim, hidden_dims=[128,128,128], device=device, method="rk4", n_steps=64).to(device)
 state = torch.load("cnf_mnist.pth", map_location=device)  # 저장된 모델 불러오기
 if isinstance(state, dict) and "state_dict" in state and "num_eps" in state:
     model.load_state_dict(state["state_dict"], strict=False)
