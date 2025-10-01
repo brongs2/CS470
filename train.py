@@ -20,10 +20,10 @@ torch.manual_seed(0)
 np.random.seed(0)
 
 dim = 28*28
-model = CNFModel(dim, hidden_dims=[64,64,64], device=device, method="euler", n_steps=64, num_eps=EPS).to(device)
+model = CNFModel(dim, hidden_dims=[128,128,128], device=device, method="euler", n_steps=128, num_eps=EPS).to(device)
 
 # Optimizer
-opt = optim.Adam(model.parameters(), lr=1e-3, weight_decay=1e-5)
+opt = optim.AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
 
 # Data
 transform = transforms.Compose([
@@ -38,7 +38,7 @@ indices = np.random.choice(len(full_dataset), size=subset_size, replace=False)
 train_dataset = Subset(full_dataset, indices)
 train_loader = DataLoader(
     train_dataset,
-    batch_size=8, shuffle=True, drop_last=True  # 더 작은 미니배치로 OOM 회피
+    batch_size=64, shuffle=True, drop_last=True  # 더 작은 미니배치로 OOM 회피
 )
 
 def dequant_logit(x, alpha=ALPHA):
@@ -58,7 +58,7 @@ accum_steps = 4
 print("🚀 Training start...")
 print(f"Using Hutchinson epsilons (K) = {EPS}")
 model.train()
-for epoch in range(10):
+for epoch in range(100):
     running = 0.0
     opt.zero_grad(set_to_none=True)
     for i, (x, _) in enumerate(train_loader):
