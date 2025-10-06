@@ -3,10 +3,21 @@ import torch, torch.nn as nn, torch.optim as optim
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Subset
 import numpy as np
+import random   # 👈 추가
 from model import CNFModel
 
 ALPHA = 0.05  # logit alpha for dequantization
 
+# -------------------------------
+# ✅ Reproducibility 설정 (import 직후, 모델/데이터 생성 전)
+seed = 0
+torch.manual_seed(seed)
+torch.cuda.manual_seed_all(seed)
+np.random.seed(seed)
+random.seed(seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+# -------------------------------
 parser = argparse.ArgumentParser()
 parser.add_argument("--eps", type=int, default=1, help="Number of Hutchinson epsilons")
 args = parser.parse_args()
@@ -58,7 +69,7 @@ accum_steps = 4
 print("🚀 Training start...")
 print(f"Using Hutchinson epsilons (K) = {EPS}")
 model.train()
-for epoch in range(30):
+for epoch in range(10):
     running = 0.0
     opt.zero_grad(set_to_none=True)
     for i, (x, _) in enumerate(train_loader):
